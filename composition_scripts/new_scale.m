@@ -34,14 +34,14 @@ pattern = resultArray;
 % Times when each note should start (in seconds)
 start_times = 0:.5:4.9;
 disp(start_times);
-scale = microtonal.tet_scales(microtonal.note_to_freq("c4"), 31, microtonal.get_mode(31, 'quarter_tone'), 2);
+scale = microtonal.scales.tet_scales(microtonal.scales.note_to_freq("c4"), 31, microtonal.scales.get_mode(31, 'quarter_tone'), 2);
 
 notes = scale(pattern);
 disp(notes);
 
 start_times = [start_times, 2, 2];
 disp(start_times);
-notes = [notes, microtonal.note_to_freq("a3"), microtonal.note_to_freq("b3")];
+notes = [notes, microtonal.scales.note_to_freq("a3"), microtonal.scales.note_to_freq("b3")];
 disp(notes);
 
 

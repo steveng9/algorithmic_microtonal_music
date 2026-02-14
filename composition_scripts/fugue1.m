@@ -2,7 +2,7 @@
 addpath('sounds');
 
 tet = 12;
-scale = microtonal.tet_scales(microtonal.note_to_freq("E2"), tet, microtonal.get_mode(tet, 'major'), 5);
+scale = microtonal.scales.tet_scales(microtonal.scales.note_to_freq("E2"), tet, microtonal.scales.get_mode(tet, 'major'), 5);
 tone = @ocarina_sound;
 
 pattern = [6,4,3,6,3,2,3];
@@ -42,9 +42,9 @@ start_times = [bass_start_times, tenor_start_times, alto_start_times, soprano_st
 multiplier = .29;
 durations = durations * multiplier;
 start_times = start_times * multiplier;
-audio_buffer = microtonal.build_audio_buffer(notes, start_times, durations, tone);
+audio_buffer = microtonal.audio.build_audio_buffer(notes, start_times, durations, tone);
 
-microtonal.play("fugue2", audio_buffer);
+microtonal.audio.play("fugue2", audio_buffer);
 
 
 

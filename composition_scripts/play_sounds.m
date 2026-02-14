@@ -18,15 +18,15 @@ for i = 1:length(sounds)
     sound_func = sounds{i};
 
     num_octaves = 3;
-    % scale = microtonal.tet_scales(microtonal.note_to_freq("c3"), scale_tet, 0:(scale_tet-1), num_octaves);
-    scale = microtonal.tet_scales(microtonal.note_to_freq("c3"), scale_tet, 0:(scale_tet-1), num_octaves);
+    % scale = microtonal.scales.tet_scales(microtonal.scales.note_to_freq("c3"), scale_tet, 0:(scale_tet-1), num_octaves);
+    scale = microtonal.scales.tet_scales(microtonal.scales.note_to_freq("c3"), scale_tet, 0:(scale_tet-1), num_octaves);
     start_times = linspace(0, 4, scale_tet*num_octaves+1);
     % sep = .4;
     dur = (start_times(2) - start_times(1))*6;
     % start_times = 0:sep:i*sep;
     disp(start_times);
 
-    audio_buffer = microtonal.build_audio_buffer(scale, start_times, dur * ones(1, scale_tet*num_octaves+1), sound_func);
+    audio_buffer = microtonal.audio.build_audio_buffer(scale, start_times, dur * ones(1, scale_tet*num_octaves+1), sound_func);
     
         
     % Save and play 

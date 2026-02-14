@@ -3,7 +3,7 @@ addpath('sounds');
 
 note_durs = 6;
 tet = 12;
-scale = microtonal.tet_scales(microtonal.note_to_freq("A3"), tet, microtonal.get_mode(tet, 'major'), 3);
+scale = microtonal.scales.tet_scales(microtonal.scales.note_to_freq("A3"), tet, microtonal.scales.get_mode(tet, 'major'), 3);
 tone = @crystal_bowl_with_pop;
 
 L = 20;
@@ -21,9 +21,9 @@ end
 durations = note_durs * ones(1, length(notes));
 
 
-audio_buffer = microtonal.build_audio_buffer(notes, start_times, durations, tone);
+audio_buffer = microtonal.audio.build_audio_buffer(notes, start_times, durations, tone);
 
-microtonal.play("LCM_4", audio_buffer);
+microtonal.audio.play("LCM_4", audio_buffer);
 
 
 

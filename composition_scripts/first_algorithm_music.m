@@ -2,7 +2,7 @@
 addpath('sounds');
 
 note_durs = 6;
-scale = microtonal.tet_scales(microtonal.note_to_freq("f3"), 12, microtonal.get_mode(12, 'dorian'), 3);
+scale = microtonal.scales.tet_scales(microtonal.scales.note_to_freq("f3"), 12, microtonal.scales.get_mode(12, 'dorian'), 3);
 tone = @pure_tubey;
 
 
@@ -19,9 +19,9 @@ start_times = [start_times1, start_times2];
 durations = note_durs * ones(1, length(notes));
 
 
-audio_buffer = microtonal.build_audio_buffer(notes, start_times, durations, tone);
+audio_buffer = microtonal.audio.build_audio_buffer(notes, start_times, durations, tone);
 
-microtonal.play("random_dorian", audio_buffer);
+microtonal.audio.play("random_dorian", audio_buffer);
 
 
 

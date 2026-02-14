@@ -3,7 +3,7 @@ addpath('sounds');
 
 % Parameters
 N = 4;  % Number of notes
-c3 = microtonal.note_to_freq('C3');  % Starting frequency
+c3 = microtonal.scales.note_to_freq('C3');  % Starting frequency
 % golden_ratio = (1 + sqrt(5)) / 2;  % φ ≈ 1.618
 golden_ratio = 1.618
 % golden_ratio = 1.682
@@ -33,7 +33,7 @@ durations = ones(1, total_notes) * note_duration;
 
 % Build audio using your existing function
 sound_func = @crystal_bowl_with_pop;
-audio_buffer = microtonal.build_audio_buffer(note_sequence, start_times, durations, sound_func);
+audio_buffer = microtonal.audio.build_audio_buffer(note_sequence, start_times, durations, sound_func);
 
 % Play
 sound(audio_buffer, 44100);

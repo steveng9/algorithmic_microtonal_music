@@ -5,7 +5,7 @@ addpath('sounds');
 % Parameters
 fs = 44100;
 sound_func = @crystal_bowl_with_pop;
-c3 = microtonal.note_to_freq('C3');
+c3 = microtonal.scales.note_to_freq('C3');
 
 % Three notes
 notes = [c3, c3 * 5/4, c3 * 3/2];  % C, E, G (major triad)
@@ -16,9 +16,9 @@ fprintf('=== STEREO PANNING DEMO ===\n\n');
 fprintf('Example 1: Three notes panned left, center, right\n');
 
 % Build mono audio for each note
-note1 = microtonal.build_audio_buffer(notes(1), 0, 3, sound_func);
-note2 = microtonal.build_audio_buffer(notes(2), 0, 3, sound_func);
-note3 = microtonal.build_audio_buffer(notes(3), 0, 3, sound_func);
+note1 = microtonal.audio.build_audio_buffer(notes(1), 0, 3, sound_func);
+note2 = microtonal.audio.build_audio_buffer(notes(2), 0, 3, sound_func);
+note3 = microtonal.audio.build_audio_buffer(notes(3), 0, 3, sound_func);
 
 % Make sure all are same length
 max_len = max([length(note1), length(note2), length(note3)]);
@@ -53,7 +53,7 @@ scale = c3 * [1, 9/8, 5/4, 4/3, 3/2, 5/3, 15/8, 2];  % Just intonation major
 num_notes = length(scale);
 
 % Build audio
-mono_audio = microtonal.build_audio_buffer(scale, (0:num_notes-1)*0.7, ones(1,num_notes)*1.5, sound_func);
+mono_audio = microtonal.audio.build_audio_buffer(scale, (0:num_notes-1)*0.7, ones(1,num_notes)*1.5, sound_func);
 
 % Create stereo with smooth panning
 stereo_panning = zeros(2, length(mono_audio));
@@ -84,7 +84,7 @@ pans = [0, 1, 0, 1];  % 0=left, 1=right
 stereo_bounce = zeros(2, round(fs * 5));
 
 for i = 1:length(bounce_notes)
-    note_audio = microtonal.build_audio_buffer(bounce_notes(i), 0, 1.5, sound_func);
+    note_audio = microtonal.audio.build_audio_buffer(bounce_notes(i), 0, 1.5, sound_func);
     start_sample = round((i-1) * 1.0 * fs) + 1;
     end_sample = min(start_sample + length(note_audio) - 1, size(stereo_bounce, 2));
     

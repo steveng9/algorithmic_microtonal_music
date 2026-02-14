@@ -2,7 +2,7 @@
 addpath('sounds');
 
 note_durs = 5;
-scale = microtonal.tet_scales(microtonal.note_to_freq("A3"), 31, microtonal.get_mode(31, 'major'), 3);
+scale = microtonal.scales.tet_scales(microtonal.scales.note_to_freq("A3"), 31, microtonal.scales.get_mode(31, 'major'), 3);
 tone = @pure_tubey;
 
 
@@ -44,9 +44,9 @@ start_times = [start_times, start_times];
 durations = note_durs * ones(1, length(notes));
 
 
-audio_buffer = microtonal.build_audio_buffer(notes, start_times, durations, tone);
+audio_buffer = microtonal.audio.build_audio_buffer(notes, start_times, durations, tone);
 
-microtonal.play("first_walk", audio_buffer);
+microtonal.audio.play("first_walk", audio_buffer);
 
 
 

@@ -5,7 +5,7 @@ addpath('sounds');
 % Parameters
 fs = 44100;
 sound_func = @crystal_bowl_with_pop;
-base_freq = microtonal.note_to_freq('C3');  % Tonic frequency
+base_freq = microtonal.scales.note_to_freq('C3');  % Tonic frequency
 
 %% PART 1: Explore specific intervals
 % 
@@ -39,14 +39,14 @@ base_freq = microtonal.note_to_freq('C3');  % Tonic frequency
 % 
 %     % Melodic (one after another)
 %     fprintf('  Melodic...\n');
-%     audio_melodic = microtonal.build_audio_buffer(...
+%     audio_melodic = microtonal.audio.build_audio_buffer(...
 %         [freq1, freq2], [0, 1.5], [1.2, 2], sound_func);
 %     sound(audio_melodic, fs);
 %     pause(length(audio_melodic)/fs + 0.5);
 % 
 %     % Harmonic (together)
 %     fprintf('  Harmonic...\n');
-%     audio_harmonic = microtonal.build_audio_buffer(...
+%     audio_harmonic = microtonal.audio.build_audio_buffer(...
 %         [freq1, freq2], [0, 0], [3, 3], sound_func);
 %     sound(audio_harmonic, fs);
 %     pause(length(audio_harmonic)/fs + 0.5);
@@ -74,7 +74,7 @@ note_times = (0:length(scale_freqs)-1) * 0.6;
 note_durs = ones(1, length(scale_freqs)) * 1.2;
 note_durs(end) = 3;  % Let last note ring
 
-audio_scale = microtonal.build_audio_buffer(scale_freqs, note_times, note_durs, sound_func);
+audio_scale = microtonal.audio.build_audio_buffer(scale_freqs, note_times, note_durs, sound_func);
 sound(audio_scale, fs);
 pause(length(audio_scale)/fs + 0.5);
 
@@ -97,7 +97,7 @@ for melody_num = 1:num_melodies
     melody_durs(end) = 3;  % Final note rings out
     
     % Build and play
-    audio_melody = microtonal.build_audio_buffer(melody_freqs, melody_times, melody_durs, sound_func);
+    audio_melody = microtonal.audio.build_audio_buffer(melody_freqs, melody_times, melody_durs, sound_func);
     sound(audio_melody, fs);
     pause(length(audio_melody)/fs + 0.5);
 end

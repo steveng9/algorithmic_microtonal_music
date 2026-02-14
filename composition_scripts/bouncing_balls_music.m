@@ -19,17 +19,17 @@ function bouncing_balls_music()
     sound_func = @crystal_bowl_with_pop;  % Change to @magic_shimmer or your other sounds
     
     % Get the musical scale
-    tonic = microtonal.note_to_freq("c2");
+    tonic = microtonal.scales.note_to_freq("c2");
 
-    scale = microtonal.tet_scales(tonic, 19, 0:4, 3);
-    % modes = microtonal.get_12tet_modes();
-    % scale = microtonal.tet_scales(tonic, 12, modes.major, 2);
-    % modes = microtonal.get_19tet_modes();
-    % scale = microtonal.tet_scales(tonic, 19, modes.chromatic, 2);
-    % modes = microtonal.get_19tet_modes();
-    % scale = microtonal.tet_scales(tonic, 19, modes.exotic1, 2);
-    % modes = microtonal.get_31tet_modes();
-    % scale = microtonal.tet_scales(tonic, 31, modes.quarter_tone, 2);
+    scale = microtonal.scales.tet_scales(tonic, 19, 0:4, 3);
+    % modes = microtonal.scales.get_12tet_modes();
+    % scale = microtonal.scales.tet_scales(tonic, 12, modes.major, 2);
+    % modes = microtonal.scales.get_19tet_modes();
+    % scale = microtonal.scales.tet_scales(tonic, 19, modes.chromatic, 2);
+    % modes = microtonal.scales.get_19tet_modes();
+    % scale = microtonal.scales.tet_scales(tonic, 19, modes.exotic1, 2);
+    % modes = microtonal.scales.get_31tet_modes();
+    % scale = microtonal.scales.tet_scales(tonic, 31, modes.quarter_tone, 2);
 
     
     % Select n notes from the scale (evenly spaced through 2 octaves)
@@ -108,7 +108,7 @@ function bouncing_balls_music()
     
     % Use your build_audio_buffer function (make sure it's in your path)
     if ~isempty(collision_notes)
-        audio_track = microtonal.build_audio_buffer(collision_notes, collision_times, collision_durations, sound_func);
+        audio_track = microtonal.audio.build_audio_buffer(collision_notes, collision_times, collision_durations, sound_func);
     else
         audio_track = zeros(1, round(simulation_time * fs));
     end

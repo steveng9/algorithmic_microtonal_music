@@ -1,0 +1,27 @@
+Six Chansons, V., Iannis Xenakis
+(1951)
+transcribed by Steven Golob
+
+voice: v1, @crystal_bowl_with_pop, 0
+voice: v2, @crystal_bowl_with_pop, 0
+voice: v3, @crystal_bowl_with_pop, 0
+voice: v4, @crystal_bowl_with_pop, 0
+voice: v5, @crystal_bowl_with_pop, -1
+voice: v6, @crystal_bowl_with_pop, -2
+
+qtr_note = 45
+C# major
+
+3.2, 3.1, 3.1, | 3.3, 2.1, 1.3, 1.1, | 2.3, 1.1, 2.1, 3.1, 4.1, 3.1
+1.2, 0.2,      | 1.2, 0.2, -1.4,     | -1.4, 0.2, 1.2
+-2.2, -2.2,    | -2.2, -3.2, r.4,    | -3.4, -3.2, -1.2
+r.4,           | r.8,                | r.8
+1.2, 3.2,      | 1.2, 2.2, 3.2, 6.2, | 2.2, 6.2, 2.2, 3.2
+1.2, 3.2,      | 1.2, 2.2, 6.2, 8.2, | 4.2, 6.2, 2.2, 3.2
+
+3.4,  | r.8
+0.4,  | 1.3, 0.1, 1.2, 2.2
+-2.4, | -2.2, -2.2, r.4
+r.4,  | r.8
+4.4,  | 3.2, 2.2, 3.2, 4.2
+4.4,  | 8.2, 5.2, 6.2, 7f.1, 6.1
