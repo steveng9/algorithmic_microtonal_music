@@ -45,7 +45,7 @@ function audio_buffer = notation_to_audio(filename, tet)
     all_sound_idxs = [];  % index into sound_funcs
     current_time = 0;
 
-    NUM_SCALE_OCTAVES = 5;
+    NUM_SCALE_OCTAVES = 6;
     BASE_SCALE_INDEX = 22;
 
     for s = 1:length(sections)
