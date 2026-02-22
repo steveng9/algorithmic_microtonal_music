@@ -14,15 +14,15 @@
 %
 % ---- Parameters (edit these) ----------------------------------------
 
-N_VOICES            = 2;
-N_ROW_CYCLES        = 6;     % how many 12-note row cycles to generate
+N_VOICES            = 4;
+N_ROW_CYCLES        = 16;     % how many 12-note row cycles to generate
 BPM                 = 80;
 KEY                 = 'C major';
 SOUND_FUNC          = 'crystal_bowl_with_pop';  % one function for all voices
 INDEPENDENT_RHYTHMS = true;
 
 % Octave shifts, one per voice (high -> low). Auto-generated if left empty.
-OCTAVE_SHIFTS  = [];
+OCTAVE_SHIFTS  = [1,0,0,-1];
 
 OUTPUT_SCORE   = 'scores/serial_generated.txt';
 
