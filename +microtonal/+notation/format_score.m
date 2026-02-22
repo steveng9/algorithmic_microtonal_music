@@ -3,6 +3,7 @@ function format_score(filename)
     %
     % Reads a score file, validates it, and rewrites it with aligned pipes
     % so that measure boundaries line up across all voices.
+    % Comment lines (beginning with #) are preserved in place.
     %
     % Input:
     %   filename: path to a .txt notation file
@@ -85,50 +86,77 @@ function format_score(filename)
         key_line = strtrim(lines{idx});
         idx = idx + 1;
 
-        % Collect notation blocks until next tempo line or EOF
+        % Collect notation blocks until next tempo line or EOF.
+        % Each block is a struct:
+        %   .pre_comments — comment lines that appeared before this block
+        %   .lines        — voice notation lines
+        % Comment lines are buffered and attached to the next real block.
+        % Comments that trail after the last block are saved separately.
         notation_blocks = {};
-        current_block = {};
+        current_block   = {};
+        pending_comments = {};
 
         while idx <= length(lines)
             trimmed = strtrim(lines{idx});
+
+            % Stop at the start of the next section
             if ~isempty(regexp(trimmed, 'qtr_note\s*=\s*\d+', 'once'))
                 if ~isempty(current_block)
-                    notation_blocks{end+1} = current_block;
+                    notation_blocks{end+1} = make_block(pending_comments, current_block);
+                    pending_comments = {};
                 end
                 break;
             end
 
-            if isempty(trimmed)
+            if startsWith(trimmed, '#')
+                % Comment line: flush any open block, then buffer the comment
                 if ~isempty(current_block)
-                    notation_blocks{end+1} = current_block;
-                    current_block = {};
+                    notation_blocks{end+1} = make_block(pending_comments, current_block);
+                    current_block    = {};
+                    pending_comments = {};
                 end
+                pending_comments{end+1} = lines{idx};
+
+            elseif isempty(trimmed)
+                % Blank line: flush any open block
+                if ~isempty(current_block)
+                    notation_blocks{end+1} = make_block(pending_comments, current_block);
+                    current_block    = {};
+                    pending_comments = {};
+                end
+
             else
                 current_block{end+1} = trimmed;
             end
+
             idx = idx + 1;
         end
+
+        % Flush final block
         if ~isempty(current_block)
-            notation_blocks{end+1} = current_block;
+            notation_blocks{end+1} = make_block(pending_comments, current_block);
+            pending_comments = {};
         end
+        % Any comments that came after the last block (rare but possible)
+        trailing_comments = pending_comments;
 
         % Validate and format each notation block
         formatted_blocks = {};
-        total_measures = 0;
+        total_measures   = 0;
 
         for b = 1:length(notation_blocks)
-            block = notation_blocks{b};
+            block_lines = notation_blocks{b}.lines;
 
-            if length(block) ~= num_voices
-                error('Block has %d lines but expected %d voices', length(block), num_voices);
+            if length(block_lines) ~= num_voices
+                error('Block has %d lines but expected %d voices', length(block_lines), num_voices);
             end
 
             % Split each voice line into measures
-            voice_measures = cell(num_voices, 1);
+            voice_measures       = cell(num_voices, 1);
             num_measures_in_block = -1;
 
             for v = 1:num_voices
-                raw_measures = strsplit(block{v}, '|');
+                raw_measures = strsplit(block_lines{v}, '|');
                 cleaned = {};
                 for m = 1:length(raw_measures)
                     txt = strtrim(raw_measures{m});
@@ -176,7 +204,9 @@ function format_score(filename)
                 formatted_lines{v} = strjoin(parts, ' | ');
             end
 
-            formatted_blocks{end+1} = formatted_lines;
+            fb.pre_comments = notation_blocks{b}.pre_comments;
+            fb.lines        = formatted_lines;
+            formatted_blocks{end+1} = fb;
         end
 
         fprintf('Section "%s" at %s: %d measures\n', key_line, tempo_line, total_measures);
@@ -185,9 +215,10 @@ function format_score(filename)
         validate_block_durations(notation_blocks, num_voices);
 
         % Store this section
-        section.tempo_line = tempo_line;
-        section.key_line = key_line;
-        section.blocks = formatted_blocks;
+        section.tempo_line        = tempo_line;
+        section.key_line          = key_line;
+        section.blocks            = formatted_blocks;
+        section.trailing_comments = trailing_comments;
         formatted_sections{end+1} = section;
     end
 
@@ -219,10 +250,20 @@ function format_score(filename)
         fprintf(fid, '%s\n', sec.key_line);
 
         for b = 1:length(sec.blocks)
+            % Comments that preceded this block
+            for c = 1:length(sec.blocks{b}.pre_comments)
+                fprintf(fid, '%s\n', sec.blocks{b}.pre_comments{c});
+            end
+            % Formatted notation block (blank line before it)
             fprintf(fid, '\n');
             for v = 1:num_voices
-                fprintf(fid, '%s\n', sec.blocks{b}{v});
+                fprintf(fid, '%s\n', sec.blocks{b}.lines{v});
             end
+        end
+
+        % Any comments after the last block in this section
+        for c = 1:length(sec.trailing_comments)
+            fprintf(fid, '%s\n', sec.trailing_comments{c});
         end
     end
 
@@ -231,10 +272,16 @@ function format_score(filename)
 end
 
 
+function blk = make_block(pre_comments, lines)
+    blk.pre_comments = pre_comments;
+    blk.lines        = lines;
+end
+
+
 function validate_block_durations(blocks, num_voices)
     measure_idx = 0;
     for b = 1:length(blocks)
-        block = blocks{b};
+        block = blocks{b}.lines;
         raw_measures_v1 = strsplit(block{1}, '|');
 
         for m = 1:length(raw_measures_v1)

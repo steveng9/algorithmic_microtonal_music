@@ -93,9 +93,11 @@ function [sections, voice_info] = parse_notation(filename)
     file_content = fread(fid, '*char')';
     fclose(fid);
 
-    % Split into lines (preserve blank lines) and remove comments
+    % Strip comment lines (lines beginning with optional whitespace then #).
+    % The content is erased but the newline stays, so each comment becomes a
+    % blank line and block separators are preserved.
+    file_content = regexprep(file_content, '(?m)^\s*#[^\r\n]*', '');
     lines = regexp(file_content, '\r?\n', 'split');
-    lines = lines(~startsWith(strtrim(lines), '#'));
 
     % Parse voice: meta lines (scan from beginning, skip non-voice lines)
     voice_info = [];
@@ -270,9 +272,16 @@ function section_voices = parse_notation_blocks(blocks, num_voices, REST_MARKER)
                         parts = strsplit(note_str, '.');
                         if length(parts) == 2
                             duration = str2double(parts{2});
-                            measure_notes = [measure_notes; REST_MARKER, duration, 0];
+                            measure_notes = [measure_notes; REST_MARKER, duration, 0, 0];
                         end
                     else
+                        % Check for sustain marker '-' at end of token
+                        sustain = 0;
+                        if endsWith(note_str, '-')
+                            sustain = 1;
+                            note_str = note_str(1:end-1);
+                        end
+
                         accidental = 0;
                         clean_note = note_str;
 
@@ -288,7 +297,7 @@ function section_voices = parse_notation_blocks(blocks, num_voices, REST_MARKER)
                         if length(parts) == 2
                             degree = str2double(parts{1});
                             duration = str2double(parts{2});
-                            measure_notes = [measure_notes; degree, duration, accidental];
+                            measure_notes = [measure_notes; degree, duration, accidental, sustain];
                         end
                     end
                 end

@@ -65,6 +65,10 @@ function audio_buffer = notation_to_audio(filename, tet)
         for m = 1:num_measures
             measure_start_time = current_time;
 
+            % Pre-compute measure bounds (needed for sustain duration extension)
+            measure_duration = sum(sec.voices{1}{m}(:, 2), 'omitnan') * eighth_note_duration;
+            measure_end_time = measure_start_time + measure_duration;
+
             for v = 1:num_voices
                 measure_notes = sec.voices{v}{m};
                 voice_time = measure_start_time;
@@ -73,9 +77,16 @@ function audio_buffer = notation_to_audio(filename, tet)
                     degree = measure_notes(n, 1);
                     duration_eighths = measure_notes(n, 2);
                     accidental = measure_notes(n, 3);
-                    duration_sec = duration_eighths * eighth_note_duration;
+                    sustain = size(measure_notes, 2) >= 4 && measure_notes(n, 4);
+                    notated_duration_sec = duration_eighths * eighth_note_duration;
 
                     if ~isnan(degree)
+                        if sustain
+                            audio_duration_sec = measure_end_time - voice_time;
+                        else
+                            audio_duration_sec = notated_duration_sec;
+                        end
+
                         freq = calculate_frequency_with_accidental(...
                             degree, accidental, octave_shifts(v), ...
                             chromatic_scale, diatonic_scale, scale_pattern, ...
@@ -83,14 +94,13 @@ function audio_buffer = notation_to_audio(filename, tet)
 
                         all_notes = [all_notes, freq];
                         all_times = [all_times, voice_time];
-                        all_durations = [all_durations, duration_sec];
+                        all_durations = [all_durations, audio_duration_sec];
                         all_sound_idxs = [all_sound_idxs, v];
                     end
-                    voice_time = voice_time + duration_sec;
+                    voice_time = voice_time + notated_duration_sec;
                 end
             end
 
-            measure_duration = sum(sec.voices{1}{m}(:, 2), 'omitnan') * eighth_note_duration;
             current_time = current_time + measure_duration;
         end
     end
