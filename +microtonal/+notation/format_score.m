@@ -35,11 +35,15 @@ function format_score(filename)
         idx = idx + 1;
     end
 
-    % Collect voice: lines (may have blank lines around them)
+    % Collect voice: and tuning: lines (may have blank lines around them)
+    tuning_line = '';
     while idx <= length(lines)
         trimmed = strtrim(lines{idx});
         if startsWith(trimmed, 'voice:')
             voice_meta_lines{end+1} = trimmed;
+            idx = idx + 1;
+        elseif startsWith(trimmed, 'tuning:')
+            tuning_line = trimmed;
             idx = idx + 1;
         elseif isempty(trimmed)
             idx = idx + 1;
@@ -236,10 +240,13 @@ function format_score(filename)
         fprintf(fid, '%s\n', header_lines{i});
     end
 
-    % Write voice meta lines
+    % Write voice meta lines and optional tuning line
     fprintf(fid, '\n');
     for i = 1:length(voice_meta_lines)
         fprintf(fid, '%s\n', voice_meta_lines{i});
+    end
+    if ~isempty(tuning_line)
+        fprintf(fid, '%s\n', tuning_line);
     end
 
     % Write sections

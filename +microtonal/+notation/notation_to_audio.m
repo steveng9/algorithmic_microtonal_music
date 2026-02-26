@@ -21,7 +21,7 @@ function audio_buffer = notation_to_audio(filename, tet)
         tet = 12;
     end
 
-    [sections, voice_info] = microtonal.notation.parse_notation(filename);
+    [sections, voice_info, metadata] = microtonal.notation.parse_notation(filename);
 
     % Resolve sound functions from voice: meta lines
     num_voices = length(voice_info);
@@ -52,12 +52,45 @@ function audio_buffer = notation_to_audio(filename, tet)
         sec = sections(s);
 
         % Build scales for this section's key
-        scale_pattern = microtonal.scales.get_mode(tet, sec.mode);
         base_freq = microtonal.scales.note_to_freq(sec.tonic);
 
-        chromatic_steps = 0:(tet-1);
-        chromatic_scale = microtonal.scales.tet_scales(base_freq, tet, chromatic_steps, NUM_SCALE_OCTAVES);
-        diatonic_scale = microtonal.scales.tet_scales(base_freq, tet, scale_pattern, NUM_SCALE_OCTAVES);
+        % --- Scale resolution: named mode or custom bracket notation ------
+        % Resolves scale_pattern (TET step offsets or JI ratios) and use_ratios.
+        if ~isempty(sec.scale_steps)
+            % Custom scale written inline in the key line, e.g. "Ab [1,3,5,6,8,10,12]"
+            scale_pattern = sec.scale_steps;
+            use_ratios = strcmp(sec.mode, 'custom_ji');
+        elseif strcmpi(metadata.tuning, 'tet')
+            scale_pattern = microtonal.scales.get_mode(tet, sec.mode);
+            use_ratios = false;
+        else
+            % JI named mode — resolve scale name from tuning: line
+            ji_scales = microtonal.scales.get_ji_scales();
+            if strcmpi(metadata.tuning, 'ji')
+                ji_mode_map = struct('major', 'major_5limit', 'minor', 'minor_5limit');
+                if ~isfield(ji_mode_map, sec.mode)
+                    error('No default JI mapping for mode "%s". Use a specific name (e.g. tuning: pythagorean_major).', sec.mode);
+                end
+                ji_name = ji_mode_map.(sec.mode);
+            else
+                ji_name = metadata.tuning;
+            end
+            if ~isfield(ji_scales, ji_name)
+                error('Unknown JI scale "%s". Available: %s', ji_name, strjoin(fieldnames(ji_scales), ', '));
+            end
+            scale_pattern = ji_scales.(ji_name);
+            use_ratios = true;
+        end
+
+        % --- Frequency array construction: TET steps or JI ratios --------
+        if use_ratios
+            ji_chromatic = [1, 16/15, 9/8, 6/5, 5/4, 4/3, 45/32, 3/2, 8/5, 5/3, 9/5, 15/8];
+            chromatic_scale = microtonal.scales.ratio_scale(base_freq, ji_chromatic, NUM_SCALE_OCTAVES);
+            diatonic_scale  = microtonal.scales.ratio_scale(base_freq, scale_pattern, NUM_SCALE_OCTAVES);
+        else
+            chromatic_scale = microtonal.scales.tet_scales(base_freq, tet, 0:(tet-1), NUM_SCALE_OCTAVES);
+            diatonic_scale  = microtonal.scales.tet_scales(base_freq, tet, scale_pattern, NUM_SCALE_OCTAVES);
+        end
 
         eighth_note_duration = sec.eighth_note_duration;
         num_measures = length(sec.voices{1});

@@ -1,4 +1,4 @@
-function [sections, voice_info] = parse_notation(filename)
+function [sections, voice_info, metadata] = parse_notation(filename)
     % PARSE_NOTATION Parse a text notation file into sections of voice/note data
     %
     % Reads a .txt file written in the microtonal text notation protocol
@@ -84,6 +84,7 @@ function [sections, voice_info] = parse_notation(filename)
     % =====================================================================
 
     REST_MARKER = NaN;
+    metadata.tuning = 'tet';  % default; overridden by 'tuning: <name>' in score
 
     fid = fopen(filename, 'r');
     if fid == -1
@@ -99,12 +100,15 @@ function [sections, voice_info] = parse_notation(filename)
     file_content = regexprep(file_content, '(?m)^\s*#[^\r\n]*', '');
     lines = regexp(file_content, '\r?\n', 'split');
 
-    % Parse voice: meta lines (scan from beginning, skip non-voice lines)
+    % Parse voice: and tuning: meta lines (scan from beginning, stop at first qtr_note)
     voice_info = [];
     first_voice_line = -1;
     last_voice_line = -1;
     for i = 1:length(lines)
         trimmed = strtrim(lines{i});
+        if ~isempty(regexp(trimmed, 'qtr_note\s*=\s*\d+', 'once'))
+            break;  % preamble ends at first tempo line
+        end
         if startsWith(trimmed, 'voice:')
             vi = parse_voice_meta(trimmed);
             if isempty(voice_info)
@@ -115,6 +119,9 @@ function [sections, voice_info] = parse_notation(filename)
             end
             last_voice_line = i;
             fprintf('Voice: %s, @%s, octave %+d\n', vi.name, vi.sound_func, vi.octave_shift);
+        elseif startsWith(trimmed, 'tuning:')
+            metadata.tuning = strtrim(trimmed(8:end));
+            fprintf('Tuning: %s\n', metadata.tuning);
         end
     end
 
@@ -158,7 +165,7 @@ function [sections, voice_info] = parse_notation(filename)
 
         % Parse key line
         key_text = strtrim(lines{idx});
-        [tonic, mode] = parse_key_signature(key_text);
+        [tonic, mode, scale_steps] = parse_key_signature(key_text);
         idx = idx + 1;
 
         fprintf('\nSection: %s, quarter = %d BPM\n', key_text, qtr_note_bpm);
@@ -205,6 +212,7 @@ function [sections, voice_info] = parse_notation(filename)
         % Build section struct
         sec.tonic = tonic;
         sec.mode = mode;
+        sec.scale_steps = scale_steps;  % [] for named modes; array for custom scale
         sec.eighth_note_duration = eighth_note_duration;
         sec.voices = section_voices;
 
@@ -349,12 +357,38 @@ function vi = parse_voice_meta(line)
 end
 
 
-function [tonic, mode] = parse_key_signature(key_text)
+function [tonic, mode, scale_steps] = parse_key_signature(key_text)
     parts = strsplit(key_text);
     tonic_str = parts{1};
     tonic = [tonic_str, '1'];
+    scale_steps = [];
 
-    if contains(lower(key_text), 'major')
+    % Check for inline scale definition, e.g.:
+    %   Ab [1,3,5,6,8,10,12]        — 1-indexed TET semitone positions
+    %   Ab [1/1,9/8,5/4,4/3,3/2,5/3,15/8]  — explicit JI ratios
+    bracket = regexp(key_text, '\[([^\]]+)\]', 'tokens', 'once');
+    if ~isempty(bracket)
+        content = strtrim(bracket{1});
+        if contains(content, '/')
+            % Ratio notation — parse each token as numerator/denominator
+            mode = 'custom_ji';
+            tokens = strsplit(content, ',');
+            scale_steps = zeros(1, numel(tokens));
+            for k = 1:numel(tokens)
+                frac = strsplit(strtrim(tokens{k}), '/');
+                if numel(frac) == 2
+                    scale_steps(k) = str2double(frac{1}) / str2double(frac{2});
+                else
+                    scale_steps(k) = str2double(frac{1});
+                end
+            end
+        else
+            % Integer notation — 1-indexed semitone positions, convert to 0-indexed
+            mode = 'custom';
+            nums = str2double(strsplit(content, {',', ' '}));
+            scale_steps = nums(~isnan(nums)) - 1;
+        end
+    elseif contains(lower(key_text), 'major')
         mode = 'major';
     elseif contains(lower(key_text), 'minor')
         mode = 'minor';
