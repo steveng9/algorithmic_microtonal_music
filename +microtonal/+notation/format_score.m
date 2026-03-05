@@ -3,7 +3,10 @@ function format_score(filename)
     %
     % Reads a score file, validates it, and rewrites it with aligned pipes
     % so that measure boundaries line up across all voices.
-    % Comment lines (beginning with #) are preserved in place.
+    %
+    % The original file structure (comments, blank lines, spacing) is
+    % preserved exactly. Only notation lines (note/rest data) are replaced
+    % with their pipe-aligned equivalents.
     %
     % Input:
     %   filename: path to a .txt notation file
@@ -18,34 +21,36 @@ function format_score(filename)
     file_content = fread(fid, '*char')';
     fclose(fid);
 
-    lines = regexp(file_content, '\r?\n', 'split');
+    original_lines = regexp(file_content, '\r?\n', 'split');
 
-    % Collect header lines (title, year, author — everything before voice: lines)
-    header_lines = {};
+    % Build a comment-stripped copy for parsing.
+    % Comment lines become blank so they act as block separators without
+    % affecting structure detection.
+    parse_lines = original_lines;
+    for i = 1:length(parse_lines)
+        if startsWith(strtrim(parse_lines{i}), '#')
+            parse_lines{i} = '';
+        end
+    end
+
+    % Scan forward past the header to find voice: declarations
     voice_meta_lines = {};
     idx = 1;
-
-    % Scan for header (non-voice, non-tempo, non-key lines at the top)
-    while idx <= length(lines)
-        trimmed = strtrim(lines{idx});
+    while idx <= length(parse_lines)
+        trimmed = strtrim(parse_lines{idx});
         if startsWith(trimmed, 'voice:') || startsWith(trimmed, 'qtr_note')
             break;
         end
-        header_lines{end+1} = lines{idx};
         idx = idx + 1;
     end
 
-    % Collect voice: and tuning: lines (may have blank lines around them)
-    tuning_line = '';
-    while idx <= length(lines)
-        trimmed = strtrim(lines{idx});
+    % Collect voice: lines (ignore blank / tuning lines here — only need count)
+    while idx <= length(parse_lines)
+        trimmed = strtrim(parse_lines{idx});
         if startsWith(trimmed, 'voice:')
             voice_meta_lines{end+1} = trimmed;
             idx = idx + 1;
-        elseif startsWith(trimmed, 'tuning:')
-            tuning_line = trimmed;
-            idx = idx + 1;
-        elseif isempty(trimmed)
+        elseif isempty(trimmed) || startsWith(trimmed, 'tuning:')
             idx = idx + 1;
         else
             break;
@@ -59,20 +64,24 @@ function format_score(filename)
 
     fprintf('Score has %d voices\n', num_voices);
 
-    % Parse sections: each starts with qtr_note + key, followed by notation
-    formatted_sections = {};
+    % line_replacements maps original line index (1-based) -> formatted content.
+    % Only notation lines will have entries here; everything else is written
+    % back verbatim so all whitespace and comment spacing is preserved.
+    line_replacements = containers.Map('KeyType', 'int32', 'ValueType', 'char');
 
-    while idx <= length(lines)
+    % Parse sections using parse_lines, collecting notation blocks and
+    % tracking original line indices so we can do targeted replacement.
+    while idx <= length(parse_lines)
         % Skip blank lines
-        while idx <= length(lines) && isempty(strtrim(lines{idx}))
+        while idx <= length(parse_lines) && isempty(strtrim(parse_lines{idx}))
             idx = idx + 1;
         end
-        if idx > length(lines)
+        if idx > length(parse_lines)
             break;
         end
 
         % Expect tempo line
-        trimmed = strtrim(lines{idx});
+        trimmed = strtrim(parse_lines{idx});
         tempo_match = regexp(trimmed, 'qtr_note\s*=\s*\d+', 'once');
         if isempty(tempo_match)
             idx = idx + 1;
@@ -82,81 +91,67 @@ function format_score(filename)
         idx = idx + 1;
 
         % Skip blank lines before key
-        while idx <= length(lines) && isempty(strtrim(lines{idx}))
+        while idx <= length(parse_lines) && isempty(strtrim(parse_lines{idx}))
             idx = idx + 1;
         end
 
         % Key line
-        key_line = strtrim(lines{idx});
+        key_line = strtrim(parse_lines{idx});
         idx = idx + 1;
 
-        % Collect notation blocks until next tempo line or EOF.
-        % Each block is a struct:
-        %   .pre_comments — comment lines that appeared before this block
-        %   .lines        — voice notation lines
-        % Comment lines are buffered and attached to the next real block.
-        % Comments that trail after the last block are saved separately.
+        % Collect notation blocks: each is a contiguous run of num_voices
+        % non-blank lines, separated by blank lines or comment lines (which
+        % parse_lines has already blanked out).
         notation_blocks = {};
-        current_block   = {};
-        pending_comments = {};
+        current_block_lines   = {};
+        current_block_indices = [];
 
-        while idx <= length(lines)
-            trimmed = strtrim(lines{idx});
+        while idx <= length(parse_lines)
+            trimmed = strtrim(parse_lines{idx});
 
             % Stop at the start of the next section
             if ~isempty(regexp(trimmed, 'qtr_note\s*=\s*\d+', 'once'))
-                if ~isempty(current_block)
-                    notation_blocks{end+1} = make_block(pending_comments, current_block);
-                    pending_comments = {};
+                if ~isempty(current_block_lines)
+                    notation_blocks{end+1} = make_block(current_block_lines, current_block_indices);
+                    current_block_lines   = {};
+                    current_block_indices = [];
                 end
                 break;
             end
 
-            if startsWith(trimmed, '#')
-                % Comment line: flush any open block, then buffer the comment
-                if ~isempty(current_block)
-                    notation_blocks{end+1} = make_block(pending_comments, current_block);
-                    current_block    = {};
-                    pending_comments = {};
+            if isempty(trimmed)
+                % Blank line (or original comment line): flush any open block
+                if ~isempty(current_block_lines)
+                    notation_blocks{end+1} = make_block(current_block_lines, current_block_indices);
+                    current_block_lines   = {};
+                    current_block_indices = [];
                 end
-                pending_comments{end+1} = lines{idx};
-
-            elseif isempty(trimmed)
-                % Blank line: flush any open block
-                if ~isempty(current_block)
-                    notation_blocks{end+1} = make_block(pending_comments, current_block);
-                    current_block    = {};
-                    pending_comments = {};
-                end
-
             else
-                current_block{end+1} = trimmed;
+                current_block_lines{end+1}   = trimmed;
+                current_block_indices(end+1) = idx;
             end
 
             idx = idx + 1;
         end
 
         % Flush final block
-        if ~isempty(current_block)
-            notation_blocks{end+1} = make_block(pending_comments, current_block);
-            pending_comments = {};
+        if ~isempty(current_block_lines)
+            notation_blocks{end+1} = make_block(current_block_lines, current_block_indices);
         end
-        % Any comments that came after the last block (rare but possible)
-        trailing_comments = pending_comments;
 
         % Validate and format each notation block
-        formatted_blocks = {};
-        total_measures   = 0;
+        total_measures = 0;
 
         for b = 1:length(notation_blocks)
-            block_lines = notation_blocks{b}.lines;
+            block = notation_blocks{b};
+            block_lines = block.lines;
 
             if length(block_lines) ~= num_voices
                 error('Block has %d lines but expected %d voices', length(block_lines), num_voices);
             end
 
             % Split each voice line into measures
-            voice_measures       = cell(num_voices, 1);
+            voice_measures        = cell(num_voices, 1);
             num_measures_in_block = -1;
 
             for v = 1:num_voices
@@ -193,8 +188,7 @@ function format_score(filename)
                 end
             end
 
-            % Build formatted lines
-            formatted_lines = cell(num_voices, 1);
+            % Build formatted lines and record replacements by original index
             for v = 1:num_voices
                 parts = cell(1, num_measures_in_block);
                 for m = 1:num_measures_in_block
@@ -205,72 +199,30 @@ function format_score(filename)
                         parts{m} = txt;
                     end
                 end
-                formatted_lines{v} = strjoin(parts, ' | ');
+                line_replacements(int32(block.line_indices(v))) = strjoin(parts, ' | ');
             end
-
-            fb.pre_comments = notation_blocks{b}.pre_comments;
-            fb.lines        = formatted_lines;
-            formatted_blocks{end+1} = fb;
         end
 
         fprintf('Section "%s" at %s: %d measures\n', key_line, tempo_line, total_measures);
 
         % Validate durations across voices
         validate_block_durations(notation_blocks, num_voices);
-
-        % Store this section
-        section.tempo_line        = tempo_line;
-        section.key_line          = key_line;
-        section.blocks            = formatted_blocks;
-        section.trailing_comments = trailing_comments;
-        formatted_sections{end+1} = section;
     end
 
-    % Write formatted file
+    % Write back: original lines verbatim except notation lines, which get
+    % their pipe-aligned replacements. All comments, blank lines, and any
+    % other spacing the user has added are preserved unchanged.
     fid = fopen(filename, 'w');
     if fid == -1
         error('Could not write to file: %s', filename);
     end
 
-    % Write header (remove trailing blank lines)
-    while ~isempty(header_lines) && isempty(strtrim(header_lines{end}))
-        header_lines(end) = [];
-    end
-    for i = 1:length(header_lines)
-        fprintf(fid, '%s\n', header_lines{i});
-    end
-
-    % Write voice meta lines and optional tuning line
-    fprintf(fid, '\n');
-    for i = 1:length(voice_meta_lines)
-        fprintf(fid, '%s\n', voice_meta_lines{i});
-    end
-    if ~isempty(tuning_line)
-        fprintf(fid, '%s\n', tuning_line);
-    end
-
-    % Write sections
-    for s = 1:length(formatted_sections)
-        sec = formatted_sections{s};
-
-        fprintf(fid, '\n%s\n', sec.tempo_line);
-        fprintf(fid, '%s\n', sec.key_line);
-
-        for b = 1:length(sec.blocks)
-            % Comments that preceded this block
-            for c = 1:length(sec.blocks{b}.pre_comments)
-                fprintf(fid, '%s\n', sec.blocks{b}.pre_comments{c});
-            end
-            % Formatted notation block (blank line before it)
-            fprintf(fid, '\n');
-            for v = 1:num_voices
-                fprintf(fid, '%s\n', sec.blocks{b}.lines{v});
-            end
-        end
-
-        % Any comments after the last block in this section
-        for c = 1:length(sec.trailing_comments)
-            fprintf(fid, '%s\n', sec.trailing_comments{c});
+    for i = 1:length(original_lines)
+        key = int32(i);
+        if isKey(line_replacements, key)
+            fprintf(fid, '%s\n', line_replacements(key));
+        else
+            fprintf(fid, '%s\n', original_lines{i});
         end
     end
 
@@ -279,9 +231,9 @@ function format_score(filename)
 end
 
 
-function blk = make_block(pre_comments, lines)
-    blk.pre_comments = pre_comments;
+function blk = make_block(lines, line_indices)
     blk.lines        = lines;
+    blk.line_indices = line_indices;
 end
 
 
