@@ -2,10 +2,10 @@ Modulatorus
 (2026)
 composed by Steven Golob
 
-voice: alto, @ocarina_sound, 0
-voice: tenor, @ocarina_sound, 0
-voice: baritone, @ocarina_sound, -1
-voice: bass, @ocarina_sound, -2
+voice: alto, @piano_sound, 0
+voice: tenor, @piano_sound, 0
+voice: baritone, @piano_sound, -1
+voice: bass, @piano_sound, -2
 
 qtr_note = 80
 C major

@@ -2,10 +2,10 @@ Sonata for 2 Pianos, Stravinsky
 (1971)
 transcribed by Steven Golob
 
-voice: treble1, @crystal_bowl_with_pop, 0
-voice: bass1, @crystal_bowl_with_pop, -1
-voice: treble2, @crystal_bowl_with_pop, -1
-voice: bass2, @crystal_bowl_with_pop, -2
+voice: treble1, @piano_sound, 0
+voice: bass1, @piano_sound, -1
+voice: treble2, @piano_sound, -1
+voice: bass2, @piano_sound, -2
 
 qtr_note = 126
 F major
